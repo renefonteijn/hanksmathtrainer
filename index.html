@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#4263eb">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Hank Math">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Hank's Multiplication Speed Trainer</title>
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#172033;background:#f4f7fb}
+*{box-sizing:border-box}body{margin:0;padding:20px;min-height:100vh}
+.app{width:min(1050px,100%);margin:auto;background:#fff;border-radius:24px;padding:28px;box-shadow:0 12px 40px #0001}
+h1{margin:0 0 5px;font-size:clamp(27px,5vw,40px)}.sub{color:#667085;margin-bottom:22px}
+.top{display:flex;justify-content:space-between;gap:16px;align-items:end;flex-wrap:wrap}
+button{font:inherit;border:0;border-radius:14px;padding:15px 25px;font-weight:750;cursor:pointer;min-height:50px}
+.primary{background:#4263eb;color:#fff}.secondary{background:#eef1f6;color:#263143}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:22px 0 12px}
+.stat{background:#f5f7fa;border-radius:14px;padding:11px;text-align:center}.stat small{display:block;color:#667085}.stat strong{font-size:22px}
+.card{text-align:center;padding:38px 16px}.q{font-size:clamp(48px,10vw,80px);font-weight:800;margin:8px 0 25px}
+input{width:min(300px,90%);font-size:30px;text-align:center;padding:15px;border:2px solid #ccd3df;border-radius:14px}
+input:focus{outline:3px solid #dbe4ff;border-color:#4263eb}
+.buttons{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:17px}.feedback{height:28px;margin-top:14px;font-weight:700}
+.result{display:none;margin-top:10px}.result.show{display:block}
+.summary{background:#f5f7fa;border-radius:16px;padding:18px;text-align:center;margin-bottom:22px}.summary .big{font-size:32px;font-weight:800}
+.legend{display:flex;gap:18px;flex-wrap:wrap;margin:0 0 12px;font-size:14px}
+.dot{display:inline-block;width:13px;height:13px;border-radius:50%;vertical-align:-1px;margin-right:5px}
+.green{background:#22c55e}.orange{background:#f59e0b}.red{background:#ef4444}.empty{background:#e5e7eb}
+.graph{border:1px solid #e2e6ed;border-radius:16px;padding:16px;background:#fff;overflow-x:auto}.graph h3{margin:0 0 12px}
+.chart{min-width:650px;height:300px}.chart svg{width:100%;height:100%;display:block}
+.matrix{margin-top:26px;overflow:auto}.matrix h3{margin-bottom:8px}
+table{border-collapse:collapse;margin:auto;font-size:12px}th,td{border:1px solid #dfe4eb;width:36px;height:32px;text-align:center}
+th{background:#f3f5f8;font-weight:700;position:sticky;top:0}.rowhead{position:sticky;left:0;background:#f3f5f8}
+.cell-green{background:#22c55e;color:#fff}.cell-orange{background:#f59e0b;color:#fff}.cell-red{background:#ef4444;color:#fff}.cell-empty{background:#f1f3f5;color:#98a2b3}
+.note{color:#667085;font-size:13px;margin-top:8px}.history{margin-top:28px}.history table{width:100%;font-size:14px}.history th,.history td{width:auto;padding:9px}
+.hidden{display:none!important}
+@media(max-width:600px){body{padding:10px}.app{padding:18px;border-radius:18px}.stats{grid-template-columns:1fr}.chart{min-width:600px}}
+</style>
+</head>
+<body>
+<main class="app">
+<div class="top">
+ <div><h1>Hank's Multiplication Speed Trainer</h1><div class="sub">30 questions · 1×1 through 15×15 · practise speed and accuracy</div></div>
+ <button id="start" class="primary">Start 30 Questions</button>
+</div>
+<div class="stats">
+ <div class="stat"><small>Question</small><strong id="qno">0 / 30</strong></div>
+ <div class="stat"><small>Correct</small><strong id="score">0</strong></div>
+ <div class="stat"><small>Total time</small><strong id="total">0.0s</strong></div>
+</div>
+<section class="card">
+ <div id="question" class="q">Ready?</div>
+ <input id="answer" type="number" inputmode="numeric" autocomplete="off" placeholder="Answer" disabled>
+ <div class="buttons"><button id="submit" class="primary" disabled>Answer</button><button id="skip" class="secondary" disabled>Skip</button></div>
+ <div id="feedback" class="feedback" aria-live="polite"></div>
+</section>
+<section id="result" class="result">
+ <div class="summary"><div class="big" id="summaryBig"></div><div id="summarySmall"></div></div>
+ <div class="legend"><span><i class="dot green"></i>0–3 sec</span><span><i class="dot orange"></i>4–7 sec</span><span><i class="dot red"></i>8+ sec</span><span><i class="dot empty"></i>Not asked</span></div>
+ <div class="graph"><h3>Answer speed — question by question</h3><div class="chart"><svg id="chart" viewBox="0 0 900 300" preserveAspectRatio="none"></svg></div></div>
+ <div class="matrix"><h3>Multiplication matrix</h3><div id="matrix"></div><div class="note">Each cell shows the response time for the most recent occurrence in this round.</div></div>
+ <div class="history"><h3>Previous rounds</h3><div id="history"></div></div>
+</section>
+</main>
+<script>
+(()=> {
+const $=id=>document.getElementById(id);
+const start=$("start"),submit=$("submit"),skip=$("skip"),answer=$("answer"),question=$("question");
+const qno=$("qno"),score=$("score"),total=$("total"),feedback=$("feedback"),result=$("result");
+const summaryBig=$("summaryBig"),summarySmall=$("summarySmall"),chart=$("chart"),matrix=$("matrix"),history=$("history");
+let running=false,n=0,correct=0,totalTime=0,a=1,b=1,started=0,records=[];
+const MAX=30, STORE="hankMathRoundsV1";
+function cls(t){return t<=3?"green":t<=7?"orange":"red"}
+function col(t){return t<=3?"#22c55e":t<=7?"#f59e0b":"#ef4444"}
+function newQ(){a=1+Math.floor(Math.random()*15);b=1+Math.floor(Math.random()*15);question.textContent=a+" × "+b;answer.value="";answer.focus();started=performance.now();qno.textContent=(n+1)+" / "+MAX;feedback.textContent=""}
+function begin(){running=true;n=0;correct=0;totalTime=0;records=[];result.classList.remove("show");start.disabled=true;submit.disabled=false;skip.disabled=false;answer.disabled=false;score.textContent="0";total.textContent="0.0s";newQ()}
+function respond(skipped){if(!running)return;let t=(performance.now()-started)/1000;let value=Number(answer.value),ok=!skipped&&answer.value.trim()!==""&&value===a*b;totalTime+=t;if(ok)correct++;records.push({a,b,time:t,correct:ok});n++;score.textContent=correct;total.textContent=totalTime.toFixed(1)+"s";if(n>=MAX)finish();else{feedback.textContent=skipped?"Skipped — "+a+" × "+b+" = "+a*b:(ok?"✓ Correct":"✗ "+a+" × "+b+" = "+a*b);newQ()}}
+function finish(){running=false;start.disabled=false;submit.disabled=true;skip.disabled=true;answer.disabled=true;start.textContent="Start Again";question.textContent="Finished!";let acc=Math.round(correct/MAX*100),avg=totalTime/MAX;summaryBig.textContent=correct+" / "+MAX+" correct · "+acc+"% accuracy";summarySmall.textContent="Average answer time: "+avg.toFixed(1)+" seconds";drawChart();drawMatrix();saveRound({date:new Date().toISOString(),correct,total:MAX,accuracy:acc,average:avg,totalTime});drawHistory();result.classList.add("show");result.scrollIntoView({behavior:"smooth"})}
+function drawChart(){let w=900,h=300,p=42,max=Math.max(8,...records.map(r=>r.time)),ym=Math.ceil(max/2)*2,s=`<line x1="${p}" y1="${h-p}" x2="${w-10}" y2="${h-p}" stroke="#cfd5df"/><line x1="${p}" y1="12" x2="${p}" y2="${h-p}" stroke="#cfd5df"/>`;[0,3,7,ym].filter((v,i,x)=>v<=ym&&x.indexOf(v)==i).forEach(v=>{let y=h-p-(v/ym)*(h-p-12);s+=`<line x1="${p}" y1="${y}" x2="${w-10}" y2="${y}" stroke="#e8ebf0"/><text x="5" y="${y+4}" font-size="12" fill="#667085">${v}s</text>`});records.forEach((r,i)=>{let x=p+i/(MAX-1)*(w-p-12),y=h-p-Math.min(r.time,ym)/ym*(h-p-12);s+=`<circle cx="${x}" cy="${y}" r="6" fill="${col(r.time)}"/><text x="${x}" y="${h-12}" text-anchor="middle" font-size="10" fill="#667085">${i+1}</text>`});chart.innerHTML=s}
+function drawMatrix(){let c=Array.from({length:16},()=>Array(16).fill(null));records.forEach(r=>c[r.a][r.b]=r);let h="<table><tr><th>×</th>";for(let j=1;j<=15;j++)h+="<th>"+j+"</th>";h+="</tr>";for(let i=1;i<=15;i++){h+="<tr><th class='rowhead'>"+i+"</th>";for(let j=1;j<=15;j++){let r=c[i][j];h+=r?`<td class="cell-${cls(r.time)}" title="${i} × ${j}: ${r.time.toFixed(2)} sec">${r.time.toFixed(1)}</td>`:"<td class='cell-empty'>—</td>"}h+="</tr>"}matrix.innerHTML=h+"</table>"}
+function saveRound(r){let rows=[];try{rows=JSON.parse(localStorage.getItem(STORE)||"[]")}catch(e){}rows.unshift(r);localStorage.setItem(STORE,JSON.stringify(rows.slice(0,20)))}
+function drawHistory(){let rows=[];try{rows=JSON.parse(localStorage.getItem(STORE)||"[]")}catch(e){}if(!rows.length){history.innerHTML="<p class='note'>No previous rounds yet.</p>";return}let h="<table><tr><th>Date</th><th>Score</th><th>Accuracy</th><th>Avg time</th></tr>";rows.forEach(r=>h+=`<tr><td>${new Date(r.date).toLocaleString()}</td><td>${r.correct}/${r.total}</td><td>${r.accuracy}%</td><td>${r.average.toFixed(1)}s</td></tr>`);history.innerHTML=h+"</table>"}
+start.addEventListener("click",begin);submit.addEventListener("click",()=>respond(false));skip.addEventListener("click",()=>respond(true));answer.addEventListener("keydown",e=>{if(e.key==="Enter")respond(false)});drawHistory();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+{
+  "name":"Hank's Multiplication Speed Trainer",
+  "short_name":"Hank Math",
+  "start_url":"./",
+  "display":"standalone",
+  "background_color":"#f4f7fb",
+  "theme_color":"#4263eb",
+  "description":"30-question multiplication speed practice from 1×1 through 15×15."
+}
